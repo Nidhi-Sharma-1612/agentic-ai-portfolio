@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nidhi Sharma — AI Engineer Portfolio
 
-## Getting Started
+Personal portfolio for AI Engineer / Agentic AI Engineer / Full Stack AI Engineer roles.
 
-First, run the development server:
+**Stack:** Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Three.js (React Three Fiber) · Framer Motion · lucide-react · Vercel AI SDK
+
+## Highlights
+
+- **3D agent graph hero**: an LLM core wired to Planner, Tools, Memory, RAG, Vector DB and other nodes, with data pulses, bloom and cursor parallax. It falls back to a lighter scene on mobile, on low-power devices and when reduced motion is requested.
+- **"Ask my agent"**: a real tool-calling chatbot. `app/api/chat/route.ts` streams from an LLM that calls typed Zod tools (`getProjects`, `getSkills`, …) over `lib/data.ts`, and the UI shows each tool call live. It includes per-IP rate limiting and input limits.
+- **The Stack**: skills laid out as the layers of an AI application's architecture.
+- Timeline experience, filterable project cards with architecture flows, a ⌘K command palette, generated OG image, JSON-LD, sitemap and robots.
+
+## Editing content
+
+All content lives in **`lib/data.ts`**. The UI and the chatbot both read from it.
+
+- Photo: `public/profile-photo.jpeg`
+- Resume: `public/resume.pdf`
+- Project links: set `github` / `demo` on each entry in `projects`
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # add an API key (see below)
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Chatbot API key
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| `AI_PROVIDER`      | Key                                                                                 | Default model      | Cost          |
+| ------------------ | ----------------------------------------------------------------------------------- | ------------------ | ------------- |
+| `google` (default) | `GOOGLE_GENERATIVE_AI_API_KEY` from [AI Studio](https://aistudio.google.com/apikey) | `gemini-2.5-flash` | Free tier     |
+| `anthropic`        | `ANTHROPIC_API_KEY` from [console.anthropic.com](https://console.anthropic.com)     | `claude-haiku-4-5` | Pay-as-you-go |
+| `openai`           | `OPENAI_API_KEY`                                                                    | `gpt-4o-mini`      | Pay-as-you-go |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Without a key the site still works. The chat shows a friendly "agent offline" message.
+Note: a claude.ai Pro/Max subscription does **not** include API access.
 
-## Learn More
+### Chat security & guardrails
 
-To learn more about Next.js, take a look at the following resources:
+Every request to `/api/chat` passes these layers, cheapest first:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Origin check:** only browser requests from this site are accepted (`NEXT_PUBLIC_SITE_URL`).
+2. **Request validation:** JSON only, 32 KB max, schema-checked with Zod.
+3. **Rate limits:** 5/minute and 40/day per visitor, plus 800/day across all visitors (`CHAT_LIMIT_*`). Set `UPSTASH_REDIS_REST_URL`/`TOKEN` so limits are shared across serverless instances; otherwise they're in-memory per instance.
+4. **History sanitizing:** only plain text is kept (max 500 chars per question, last 10 messages). Client-sent tool results and system messages are rejected, so they can't be forged.
+5. **Prompt-injection screen:** a regex check answers attempts like "ignore previous instructions" with a canned reply, with no LLM call.
+6. **Topic classifier:** a small LLM call declines anything not about Nidhi (general knowledge, coding help, other people) with a canned reply.
+7. **Agent instructions:** strict scope, tool-grounded facts only, and tool output treated as data.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`lib/guardrails.ts` holds the guardrails, `lib/rate-limit.ts` the limits, and `app/api/chat/route.ts` wires them together. Site-wide security headers are set in `next.config.ts`.
 
-## Deploy on Vercel
+## Deploy to Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push this folder to a GitHub repo.
+2. Import it at [vercel.com/new](https://vercel.com/new). The framework is auto-detected.
+3. In **Settings → Environment Variables**, add `AI_PROVIDER`, the matching API key, and `NEXT_PUBLIC_SITE_URL` (your final URL).
+4. Deploy, then redeploy after changing any env var.
