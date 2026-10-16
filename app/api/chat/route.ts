@@ -15,10 +15,24 @@ import { clientIp, rateLimit, sameOrigin } from "@/lib/rate-limit";
 
 export const maxDuration = 30;
 
+// `guard` is a smaller, cheaper model for the topic classifier. On Gemini it also
+// has its own free-tier quota, so classification doesn't eat the agent's allowance.
 const MODELS = {
-  anthropic: { label: "Claude Haiku 4.5", make: (id?: string) => anthropic(id ?? "claude-haiku-4-5") },
-  openai: { label: "GPT-4o mini", make: (id?: string) => openai(id ?? "gpt-4o-mini") },
-  google: { label: "Gemini 2.5 Flash", make: (id?: string) => google(id ?? "gemini-2.5-flash") },
+  anthropic: {
+    label: "Claude Haiku 4.5",
+    make: (id?: string) => anthropic(id ?? "claude-haiku-4-5"),
+    guard: () => anthropic("claude-haiku-4-5"),
+  },
+  openai: {
+    label: "GPT-4o mini",
+    make: (id?: string) => openai(id ?? "gpt-4o-mini"),
+    guard: () => openai("gpt-4o-mini"),
+  },
+  google: {
+    label: "Gemini 3.8 Flash",
+    make: (id?: string) => google(id ?? "gemini-3.8-flash"),
+    guard: () => google(process.env.AI_GUARD_MODEL || "gemini-3.1-flash-lite"),
+  },
 };
 const KEYS = {
   anthropic: "ANTHROPIC_API_KEY",
@@ -30,8 +44,8 @@ const KEYS = {
 function getModel() {
   const provider = (process.env.AI_PROVIDER ?? "google").toLowerCase() as keyof typeof MODELS;
   if (!(provider in MODELS) || !process.env[KEYS[provider]]) return null;
-  const { label, make } = MODELS[provider];
-  return { label, model: make(process.env.AI_MODEL || undefined) };
+  const { label, make, guard } = MODELS[provider];
+  return { label, model: make(process.env.AI_MODEL || undefined), guard: guard() };
 }
 
 const json = (status: number, error: string, headers?: HeadersInit) => Response.json({ error }, { status, headers });
@@ -104,7 +118,7 @@ export async function POST(req: Request) {
   if (looksLikeInjection(question)) {
     return withLimitHeaders(cannedReply(REFUSALS.injection, "injection"), limit.remaining);
   }
-  const verdict = await classifyQuestion(active.model, messages);
+  const verdict = await classifyQuestion(active.guard, messages);
   if (verdict !== "allowed") {
     return withLimitHeaders(cannedReply(REFUSALS[verdict], verdict), limit.remaining);
   }
@@ -117,6 +131,8 @@ export async function POST(req: Request) {
     stopWhen: isStepCount(4),
     maxOutputTokens: 500,
     temperature: 0.3,
+    // One retry only: retrying a quota error just burns more of the quota.
+    maxRetries: 1,
     abortSignal: AbortSignal.any([req.signal, AbortSignal.timeout(25_000)]),
   });
 
@@ -124,7 +140,12 @@ export async function POST(req: Request) {
     stream: toUIMessageStream({
       stream: result.stream,
       // Never leak provider/internal error details to the browser.
-      onError: () => "The agent hit an error. Please try again in a moment.",
+      onError: (error) =>
+        /quota|rate.?limit|RESOURCE_EXHAUSTED|429|high demand|overloaded|503/i.test(
+          String((error as Error)?.message ?? error),
+        )
+          ? "I'm getting a lot of questions right now. Please try again in about a minute."
+          : "The agent hit an error. Please try again in a moment.",
     }),
   });
   return withLimitHeaders(res, limit.remaining);

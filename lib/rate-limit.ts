@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { siteUrl } from "./site";
 
 // Three tiers protect each public endpoint (and the bills behind them):
 //   burst  – per IP, stops rapid-fire spamming
@@ -99,7 +100,7 @@ export function sameOrigin(req: Request) {
   const origin = req.headers.get("origin");
   if (!origin) return false;
   const allowed = new Set([new URL(req.url).host, req.headers.get("host")]);
-  if (process.env.NEXT_PUBLIC_SITE_URL) allowed.add(new URL(process.env.NEXT_PUBLIC_SITE_URL).host);
+  allowed.add(new URL(siteUrl).host);
   try {
     return allowed.has(new URL(origin).host);
   } catch {

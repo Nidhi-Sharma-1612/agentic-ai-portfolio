@@ -31,7 +31,7 @@ npm run dev                  # http://localhost:3000
 
 | `AI_PROVIDER`      | Key                                                                                 | Default model      | Cost          |
 | ------------------ | ----------------------------------------------------------------------------------- | ------------------ | ------------- |
-| `google` (default) | `GOOGLE_GENERATIVE_AI_API_KEY` from [AI Studio](https://aistudio.google.com/apikey) | `gemini-2.5-flash` | Free tier     |
+| `google` (default) | `GOOGLE_GENERATIVE_AI_API_KEY` from [AI Studio](https://aistudio.google.com/apikey) | `gemini-3.8-flash` | Free tier     |
 | `anthropic`        | `ANTHROPIC_API_KEY` from [console.anthropic.com](https://console.anthropic.com)     | `claude-haiku-4-5` | Pay-as-you-go |
 | `openai`           | `OPENAI_API_KEY`                                                                    | `gpt-4o-mini`      | Pay-as-you-go |
 

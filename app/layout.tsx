@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { profile } from "@/lib/data";
 import "./globals.css";
+import { siteUrl } from "@/lib/site";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-space-grotesk" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const title = `${profile.name} — AI Engineer · Agentic AI · Full Stack`;
 const description =
   "Portfolio of Nidhi Sharma, an AI Engineer building autonomous agents (LangGraph, CrewAI, LlamaIndex, Agentic RAG) and production full-stack products with Next.js and TypeScript.";

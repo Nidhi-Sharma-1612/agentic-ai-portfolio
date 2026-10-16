@@ -100,6 +100,7 @@ export async function classifyQuestion(model: LanguageModel, messages: UIMessage
         schema: z.object({ verdict: z.enum(["allowed", "off_topic", "injection", "abusive"]) }),
       }),
       temperature: 0,
+      maxRetries: 1,
       maxOutputTokens: 60,
       abortSignal: AbortSignal.timeout(8_000),
     });

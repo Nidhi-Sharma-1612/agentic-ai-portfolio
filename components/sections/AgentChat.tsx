@@ -78,16 +78,34 @@ const TOOL_LABELS: Record<string, string> = {
 
 /** Tiny markdown renderer: **bold**, `- ` bullets and paragraphs. */
 function RichText({ text }: { text: string }) {
+  // **bold** and [label](url). Links are limited to https, mailto and same-site paths.
   const inline = (line: string) =>
-    line.split(/(\*\*[^*]+\*\*)/g).map((chunk, i) =>
-      chunk.startsWith("**") && chunk.endsWith("**") ? (
-        <strong key={i} className="font-semibold text-cyan">
-          {chunk.slice(2, -2)}
-        </strong>
-      ) : (
-        <Fragment key={i}>{chunk}</Fragment>
-      ),
-    );
+    line.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\([^)\s]+\))/g).map((chunk, i) => {
+      if (chunk.startsWith("**") && chunk.endsWith("**"))
+        return (
+          <strong key={i} className="font-semibold text-cyan">
+            {chunk.slice(2, -2)}
+          </strong>
+        );
+      const link = chunk.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+      if (link) {
+        const [, label, href] = link;
+        if (!/^(https:\/\/|mailto:|\/(?!\/))/i.test(href)) return <Fragment key={i}>{label}</Fragment>;
+        const external = href.startsWith("https://");
+        return (
+          <a
+            key={i}
+            href={href}
+            target={external ? "_blank" : undefined}
+            rel={external ? "noopener noreferrer nofollow" : undefined}
+            className="text-cyan underline decoration-cyan/40 underline-offset-2 hover:decoration-cyan"
+          >
+            {label}
+          </a>
+        );
+      }
+      return <Fragment key={i}>{chunk}</Fragment>;
+    });
 
   const blocks: React.ReactNode[] = [];
   let bullets: string[] = [];
