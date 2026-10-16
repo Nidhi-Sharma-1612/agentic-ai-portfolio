@@ -11,6 +11,7 @@ import {
 } from "ai";
 import { agentInstructions, agentTools } from "@/lib/agent-context";
 import { classifyQuestion, LIMITS, looksLikeInjection, REFUSALS, sanitizeMessages, textOf } from "@/lib/guardrails";
+import { withFallback } from "@/lib/model-fallback";
 import { clientIp, rateLimit, sameOrigin } from "@/lib/rate-limit";
 
 export const maxDuration = 30;
@@ -45,7 +46,9 @@ function getModel() {
   const provider = (process.env.AI_PROVIDER ?? "google").toLowerCase() as keyof typeof MODELS;
   if (!(provider in MODELS) || !process.env[KEYS[provider]]) return null;
   const { label, make, guard } = MODELS[provider];
-  return { label, model: make(process.env.AI_MODEL || undefined), guard: guard() };
+  const lite = guard();
+  // If the main model is rate-limited, the lite model answers instead of erroring.
+  return { label, model: withFallback(make(process.env.AI_MODEL || undefined), lite), guard: lite };
 }
 
 const json = (status: number, error: string, headers?: HeadersInit) => Response.json({ error }, { status, headers });

@@ -220,6 +220,8 @@ function errorText(error: Error) {
   if (msg.includes("forbidden")) return "This request was blocked. Please reload the page and try again.";
   if (msg.includes("too_large") || msg.includes("bad_request"))
     return "That message couldn't be sent. Try a shorter question.";
+  // Friendly messages written by the server (e.g. "I'm getting a lot of questions…") are shown as-is.
+  if (/^[A-Z][^{}<>]{10,200}[.!?]$/.test(msg.trim())) return msg.trim();
   return "Something went wrong reaching the agent. Please try again.";
 }
 
